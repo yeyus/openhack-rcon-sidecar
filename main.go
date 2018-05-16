@@ -29,9 +29,10 @@ type Config struct {
 	PodName string `envconfig:"POD_NAME"`
 
 	// Minecraft server info
-	Host     string `envconfig:"HOST"`
-	Port     string `envconfig:"PORT"`
-	Password string `envconfig:"PASSWORD"`
+	Host       string `envconfig:"HOST"`
+	Port       string `envconfig:"PORT"`
+	Password   string `envconfig:"PASSWORD"`
+	DataVolume string `envconfig:"DATA_VOLUME"`
 
 	// LogAnalytics info
 	CustomerId string `envconfig:"AZURE_CUSTOMER_ID"`
@@ -43,6 +44,14 @@ type OnlineUsersPayload struct {
 	OnlinePlayers int
 	MaxPlayers    int
 	Population    int
+}
+
+func CountFilesInDir(dir string) int {
+	files, err := ioutil.ReadDir(dir)
+	if err != nil {
+		log.Printf("Error counting files in %s directory:, %s", dir, err.Error())
+	}
+	return len(files)
 }
 
 // https://docs.microsoft.com/en-us/azure/log-analytics/log-analytics-data-collector-api#python-sample
@@ -109,11 +118,14 @@ func GetServerStatus(config Config) error {
 		return err
 	}
 
+	count := CountFilesInDir(config.DataVolume)
+	log.Printf("Server population is %d", count)
+
 	err = PostToLogAnalytics(config, OnlineUsersPayload{
 		PodName:       config.PodName,
 		OnlinePlayers: pong.Players.Online,
 		MaxPlayers:    pong.Players.Max,
-		Population:    1000,
+		Population:    count,
 	})
 	if err != nil {
 		return err
